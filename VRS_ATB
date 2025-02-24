@@ -1,0 +1,149 @@
+--[[
+    WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
+]]
+
+local Player = game:GetService("Players").LocalPlayer
+local Character = Player.Character or Player.CharacterAdded:Wait()
+local Humanoid = Character:FindFirstChildOfClass("Humanoid")
+local RootPart = Humanoid and Humanoid.RootPart
+
+local AntiBangEnabled = false  
+local IsVoiding = false
+local RanTP = false
+local VoidDepth = -1000
+local AbDelay = 2  
+
+function GetNearestPlayers()
+    return true
+end
+
+-- إرسال إشعار عند تشغيل السكربت
+game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = "✦✦ VRS ✦✦",  
+    Text = "✦✦ أهلاً بك بحماية ✦ VRS ✦✦",  
+    Duration = 5  
+})
+
+-- إنشاء واجهة المستخدم GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Parent = game:GetService("CoreGui")
+
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Size = UDim2.new(0, 150, 0, 45)  -- تم تقليص الحجم هنا
+ToggleButton.Position = UDim2.new(0.5, -75, 0, 50)  -- تم تعديل الموضع ليكون متناسباً مع الحجم الأصغر
+ToggleButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0)  
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.Text = "✦⦿ تشغيل AntiBang ⦿✦"
+ToggleButton.Font = Enum.Font.Arcade
+ToggleButton.TextSize = 18  -- تم تعديل حجم النص لتناسب الحجم الأصغر
+ToggleButton.Parent = ScreenGui
+ToggleButton.BorderSizePixel = 3
+ToggleButton.BorderColor3 = Color3.fromRGB(255, 255, 0)  
+
+-- جعل الزر قابلًا للسحب
+local UIS = game:GetService("UserInputService")
+local dragging, dragInput, startPos, startMousePos
+
+ToggleButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        startPos = ToggleButton.Position
+        startMousePos = input.Position
+    end
+end)
+
+ToggleButton.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+
+ToggleButton.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - startMousePos
+        ToggleButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- تأثير حركة الزر (نبض)
+spawn(function()
+    while true do
+        for i = 1, 5 do
+            ToggleButton.Size = UDim2.new(0, 150 + i, 0, 45 + i)
+            task.wait(0.05)
+        end
+        for i = 5, 1, -1 do
+            ToggleButton.Size = UDim2.new(0, 150 + i, 0, 45 + i)
+            task.wait(0.05)
+        end
+    end
+end)
+
+-- تأثيرات عند تمرير الماوس فوق الزر
+ToggleButton.MouseEnter:Connect(function()
+    ToggleButton.TextSize = 20
+    ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 0)  
+end)
+
+ToggleButton.MouseLeave:Connect(function()
+    ToggleButton.TextSize = 18
+    ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+end)
+
+-- وظيفة تشغيل/إيقاف AntiBang مع تأثير تغيير الألوان تدريجيًا
+ToggleButton.MouseButton1Click:Connect(function()
+    AntiBangEnabled = not AntiBangEnabled
+
+    for i = 0, 255, 10 do
+        ToggleButton.BackgroundColor3 = AntiBangEnabled and Color3.fromRGB(0, i, 0) or Color3.fromRGB(i, 0, 0)
+        task.wait(0.01)
+    end
+
+    ToggleButton.Text = AntiBangEnabled and "✦⦿ إيقاف AntiBang ⦿✦" or "✦⦿ تشغيل AntiBang ⦿✦"
+end)
+
+-- تشغيل السكربت الأساسي
+spawn(function()
+    while task.wait() do
+        if AntiBangEnabled and Character and Humanoid and RootPart and not IsVoiding then
+            if GetNearestPlayers() then
+                if RanTP then
+                    RootPart.CFrame = RootPart.CFrame + Vector3.new(math.random(1, 50), 0, math.random(1, 50))
+                else
+                    IsVoiding = true
+                    local CurrentPosition = (RootPart.Velocity.Magnitude < 50) and RootPart.CFrame or workspace.CurrentCamera.Focus
+                    local Timer = tick()
+                    local OldDH = workspace.FallenPartsDestroyHeight
+
+                    local success = pcall(function()
+                        workspace.FallenPartsDestroyHeight = math.huge * -1
+                    end)
+
+                    if success then
+                        repeat
+                            RootPart.CFrame = CFrame.new(0, VoidDepth, 0) * CFrame.Angles(math.rad(90), 0, 0)
+                            RootPart.AssemblyLinearVelocity = Vector3.new()
+                            task.wait()
+                        until tick() > Timer + AbDelay
+                    end
+
+                    RootPart.AssemblyLinearVelocity = Vector3.new()
+                    RootPart.CFrame = CurrentPosition
+                    Humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+
+                    pcall(function()
+                        workspace.FallenPartsDestroyHeight = OldDH
+                    end)
+
+                    IsVoiding = false
+                end
+            end
+        end
+    end
+end)
